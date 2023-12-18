@@ -159,8 +159,8 @@ func (a *chiAdapter) Group(fn func(), middlewares ...func(http.Handler) http.Han
 }
 
 // NewAdapter creates a new adapter for the given chi router.
-func NewAdapter(r chi.Router) huma.Adapter {
-	return &chiAdapter{router: r, route: defaultHandler}
+func NewAdapter(r chi.Router) chiAdapter {
+	return chiAdapter{router: r, route: defaultHandler}
 }
 
 // New creates a new Huma API using the latest v5.x.x version of Chi.
