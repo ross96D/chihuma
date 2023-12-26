@@ -8,10 +8,10 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/queryparam"
 	chiV4 "github.com/go-chi/chi"
 	"github.com/go-chi/chi/v5"
+	"github.com/ross96D/huma"
+	"github.com/ross96D/huma/queryparam"
 )
 
 type chiContext struct {
