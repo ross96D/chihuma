@@ -10,15 +10,18 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/queryparam"
-	chiV4 "github.com/go-chi/chi"
 	"github.com/go-chi/chi/v5"
 )
 
+// MultipartMaxMemory is the maximum memory to use when parsing multipart
+// form data.
+var MultipartMaxMemory int64 = 8 * 1024
+
 type chiContext struct {
-	op *huma.Operation
-	r  *http.Request
-	w  http.ResponseWriter
-	v4 bool
+	op     *huma.Operation
+	r      *http.Request
+	w      http.ResponseWriter
+	status int
 }
 
 func (c chiContext) Operation() *huma.Operation {
@@ -42,11 +45,7 @@ func (c chiContext) URL() url.URL {
 }
 
 func (c chiContext) Param(name string) string {
-	if !c.v4 {
-		return chi.URLParam(c.r, name)
-	}
-
-	return chiV4.URLParam(c.r, name)
+	return chi.URLParam(c.r, name)
 }
 
 func (c chiContext) Query(name string) string {
@@ -70,7 +69,7 @@ func (c chiContext) BodyReader() io.Reader {
 }
 
 func (c chiContext) GetMultipartForm() (*multipart.Form, error) {
-	err := c.r.ParseMultipartForm(8 * 1024)
+	err := c.r.ParseMultipartForm(MultipartMaxMemory)
 	return c.r.MultipartForm, err
 }
 
@@ -78,8 +77,13 @@ func (c chiContext) SetReadDeadline(deadline time.Time) error {
 	return huma.SetReadDeadline(c.w, deadline)
 }
 
-func (c chiContext) SetStatus(code int) {
+func (c *chiContext) SetStatus(code int) {
+	c.status = code
 	c.w.WriteHeader(code)
+}
+
+func (c *chiContext) Status() int {
+	return c.status
 }
 
 func (c chiContext) AppendHeader(name string, value string) {
@@ -166,23 +170,4 @@ func NewAdapter(r chi.Router) chiAdapter {
 // New creates a new Huma API using the latest v5.x.x version of Chi.
 func New(r chi.Router, config huma.Config) huma.API {
 	return huma.NewAPI(config, &chiAdapter{router: r, route: defaultHandler})
-}
-
-type chiAdapterV4 struct {
-	router chiV4.Router
-}
-
-func (a chiAdapterV4) Handle(op *huma.Operation, handler func(huma.Context)) {
-	a.router.MethodFunc(op.Method, op.Path, func(w http.ResponseWriter, r *http.Request) {
-		handler(&chiContext{op: op, r: r, w: w, v4: true})
-	})
-}
-
-func (a chiAdapterV4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.router.ServeHTTP(w, r)
-}
-
-// NewV4 creates a new Huma API using the older v4.x.x version of Chi.
-func NewV4(r chiV4.Router, config huma.Config) huma.API {
-	return huma.NewAPI(config, chiAdapterV4{router: r})
 }
